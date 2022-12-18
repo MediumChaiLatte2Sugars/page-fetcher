@@ -2,13 +2,23 @@
 const request = require('request');
 const fs = require('fs');
 const readline = require('node:readline');
+const path = require('node:path');
 const { stdin: input, stdout: output } = require('node:process');
 
 // Setting required arugments
 const arguments = process.argv.slice(2);
 const URL = arguments[0];
-const LOCAL_PATH = arguments[1];
+const INSTALL_PATH = arguments[1];
 
+// Path deconstructing for parsing purposes
+let newPath = path.parse(INSTALL_PATH);
+newPath.base = '';
+newPath.ext = '';
+newPath.name = '';
+
+
+// Initiaize readline obj to obtain user response
+const rl = readline.createInterface({ input, output });
 
 request(URL, (error, response, body) => {
 
@@ -22,56 +32,47 @@ request(URL, (error, response, body) => {
   }
 
   // Check on provided path
-  fs.access(LOCAL_PATH, fs.F_Ok , (err) => {
+  fs.access(path.format(newPath), fs.F_Ok , (err) => {
     
     if (err) {
-      console.error("Path access failure: ", err);
+      return console.error("Ivalid path provided: ", err);
     }
+    
+    // Check if file exists
+    fs.access(INSTALL_PATH, fs.F_Ok , (err) => {  
 
-    // // Invalid path given
-    // if (!stats.isDirectory()) {
-    //   throw new Error("Provided path is not a directory!");
-    // }
-
-    // Initiaize readline obj to obtain user response
-    const rl = readline.createInterface({ input, output });
-
-    // Check if file already exists
-    if (stats.isFile()) {
-
+      // File doesn't exist
+      if (err){
+       writeToFile();
+       console.log(`Downloaded and saved ${body.length} bytes to ${INSTALL_PATH}`);
+       process.exit();
+      }
+       
       // Prompt user for control flow decision
-      rl.question("File exists, overwrite (Y/N)?  ", (answer) => {
+      rl.question("File exists, overwrite (Y/N)? ", (answer) => {
 
-        if (answer.toUpperCase = "Y") {
+        if (answer.toUpperCase() === "Y") {
 
-          // Write to file if path is valid
-          fs.writeFile(LOCAL_PATH, body, err => {
-            if (err) {
-              console.error("Write to disk failed: ", err);
-            }
-            // Success message(s)
-            console.log(`Downloaded and saved ${body.length} bytes to ${LOCAL_PATH}`);
-            rl.close();
-            process.exit();
-          });
-
+          // Write to file and close input
+          writeToFile();
+          rl.close();
+          console.log(`Downloaded and saved ${body.length} bytes to ${INSTALL_PATH}`);
+          process.exit();
         }
 
-        r1.close();
         process.exit();
+    });
 
-      });
-    }
-    // Write to file if path is valid
-    fs.writeFile(LOCAL_PATH, body, err, stats => {
+    });
+  });
+
+  const writeToFile = () => {
+
+    fs.writeFile(INSTALL_PATH, body, err => {
       if (err) {
         console.error("Write to disk failed: ", err);
       }
-      // Success message(s)
-      console.log(`Downloaded and saved ${body.length} bytes to ${LOCAL_PATH}`);
     });
-
-
-
-  });
-})
+  
+  }
+});
